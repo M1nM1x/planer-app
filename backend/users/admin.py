@@ -49,13 +49,9 @@ class UserChangeForm(forms.ModelForm):
         fields = ["email", "password"]
 
 class CustomUserAdmin(UserAdmin):
-    # The forms to add and change user instances
     form = UserChangeForm
     add_form = UserCreationForm
     
-    # The fields to be used in displaying User model
-    # These override the definitions on the base UserAdmin
-    # that refence specific fields on auth.User
     list_display = ["email", "is_staff", "is_active", "created_at"]
 
     fieldsets = (
@@ -64,8 +60,6 @@ class CustomUserAdmin(UserAdmin):
         ("Groups", {"fields": ("groups", "user_permissions")})
     )
     
-    # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
-    # overrides get_fieldsets to use this attribute when creating a user.
     add_fieldsets = (
         (
             None, 
@@ -81,4 +75,4 @@ class CustomUserAdmin(UserAdmin):
     filter_horizontal = []
 
 admin.site.register(User, CustomUserAdmin)
-admin.site.unregister(Group)
+admin.site.unregister(Group)    
