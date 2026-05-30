@@ -1,45 +1,62 @@
-from django.core.serializers import serialize
-from django.http import Http404
-from rest_framework.generics import ListCreateAPIView
+from django.contrib.auth import get_user_model
+
+from rest_framework import status, generics
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from rest_framework import status, viewsets
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
-from rest_framework import mixins, generics
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
-from users.serializers import UserSerializer
+from users.serializers import CurrentUserSerializer, RegisterSerializer
 
 User = get_user_model()
 
-
-class UserViewSet(viewsets.ModelViewSet):
+class RegisterUserAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = RegisterSerializer
 
-class UserDetails(APIView):
-    
-    def get_object(self, pk):
-        try:
-            return User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            raise Http404
-    
-    def get(self, request, pk):
-        user = self.get_object(pk)
-        serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, pk, *args, **kwargs):
-        user = self.get_object(pk=pk)
-        serializer = UserSerializer(data=request.data, instance=user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "user": {"email": user.email},
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_201_CREATED)
 
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+class CurrentUserAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def delete(self, request, pk):
-        user = self.get_object(pk)
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
+    def get(self, request, *args, **kwargs):
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
+
+class DeleteUserAPIView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class LogoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            refresh_token = request.data.get("refresh")
+            if not refresh_token:
+                return Response({
+                    "detail": "Refresh token is required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({
+                "message": "Successfully logged out"
+            }, status=status.HTTP_205_RESET_CONTENT)
+        except TokenError as e:
+            return Response({
+                "detail": f"Invalid refresh token: {str(e)}"
+            }, status=status.HTTP_400_BAD_REQUEST)
