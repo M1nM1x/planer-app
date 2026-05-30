@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
 
 
-class UserManager(BaseUserManager):    
+class CustomUserManager(BaseUserManager):
     """Custom user model manager with email as the unique identifier"""
     
     def _create_user(self, email, password=None, **extra_fields):
@@ -58,7 +58,7 @@ class User(AbstractUser):
     email = models.EmailField(max_length=50, unique=True, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    objects = UserManager()
+    objects = CustomUserManager()
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

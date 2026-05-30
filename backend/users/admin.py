@@ -8,8 +8,7 @@ from django.core.exceptions import ValidationError
 from users.models import User
 
 class UserCreationForm(forms.ModelForm):
-    """A form for creating users. Includes all the required 
-    fields, plus repeated password"""
+    """A form for creating users. Includes all the required fields, plus repeated password"""
 
     password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
     password2 = forms.CharField(label="Password Confirmation", widget=forms.PasswordInput)
@@ -37,10 +36,7 @@ class UserCreationForm(forms.ModelForm):
         return user
     
 class UserChangeForm(forms.ModelForm):
-    """A form for updating users. Includes all the fields on
-    the user, but replaces the password field with admin's
-    disabled password hash display field.
-    """
+    """A form for updating users. Includes all the fields on the user, but replaces the password field with admin's disabled password hash display field."""
 
     password = ReadOnlyPasswordHashField()
 
