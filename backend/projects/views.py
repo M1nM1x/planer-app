@@ -1,28 +1,77 @@
-from rest_framework import status, generics
+from rest_framework import generics
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Project
-from projects import serializers
+from .models import Project, ProjectMember
+from .permissions import IsProjectOwner
+from .serializers import (CreateProjectSerializer,
+                          ProjectMemberSerializer,
+                          ProjectSerializer,
+                          AddProjectMemberSerializer)
 
-class CreateProjectAPIView(generics.CreateAPIView):
+
+class ProjectAPIView(generics.ListCreateAPIView):
+    """
+    Responsible for creating project and listing all projects
+    """
+
     permission_classes = [IsAuthenticated]
 
     queryset = Project.objects.all()
-    serializer_class = serializers.CreateProjectSerializer
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-class ProjectListAPIView(APIView):
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ProjectSerializer
 
-    def get(self, request, *args, **kwargs):
-        projects_list = Project.objects.all()
-        serializer = serializers.ProjectSerializer(projects_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return CreateProjectSerializer
 
-class ProjectDetailAPIView(generics.RetrieveAPIView):
+class ProjectDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Responsible for updating and deleting project and getting info about concrete project
+    """
+
+    permission_classes = [IsProjectOwner]
+
     queryset = Project.objects.all()
-    serializer_class = serializers.ProjectSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ProjectSerializer
+
+        return CreateProjectSerializer
+
+
+class ProjectMemberAPIView(generics.ListCreateAPIView):
+
+    permission_classes = [IsProjectOwner]
+
+    queryset = ProjectMember.objects.all()
+    serializer_class = AddProjectMemberSerializer
+
+    def get_queryset(self):
+        return ProjectMember.objects.filter(project_id=self.kwargs["pk"])
+
+    def perform_create(self, serializer, **kwargs):
+        project = Project.objects.get(pk=self.kwargs['pk'])
+
+        serializer.save(project=project)
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ProjectMemberSerializer
+
+        return AddProjectMemberSerializer
+
+class RemoveProjectMemberAPIView(generics.RetrieveDestroyAPIView):
+    permission_classes = [IsProjectOwner]
+
+    queryset = ProjectMember.objects.all()
+
+    def get_object(self):
+        return ProjectMember.objects.get(
+            project_id=self.kwargs["project_pk"],
+            user_id=self.kwargs["user_pk"]
+        )

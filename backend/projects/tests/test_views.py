@@ -35,5 +35,5 @@ class CreateProjectTestCase(BaseAPITestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_project_list(self):
-        res = self.client.get(self.list_url)
+        res = self.client.get(self.create_url)
         self.assertEqual(res.status_code, 200)
